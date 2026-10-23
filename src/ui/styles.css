@@ -237,6 +237,7 @@ button {
   background: var(--accent);
   color: var(--accent-text);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 button.ghost {
