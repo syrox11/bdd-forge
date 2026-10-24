@@ -353,3 +353,16 @@ td ol {
   color: var(--muted);
   font-size: 0.85rem;
 }
+
+.actions .inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: auto;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.actions .inline select {
+  width: auto;
+}

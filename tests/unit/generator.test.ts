@@ -2,12 +2,26 @@ import { describe, expect, it } from 'vitest';
 import { AstBuilder, compile, GherkinClassicTokenMatcher, Parser } from '@cucumber/gherkin';
 import { IdGenerator } from '@cucumber/messages';
 import { CucumberExpression, ParameterTypeRegistry } from '@cucumber/cucumber-expressions';
-import { buildFeature, collectStepDefs, generate, renderFeature, sampleInput, toCsv, toManualCases } from '../../src/core';
-import type { GeneratorInput, Language, Style, TestLevel, TestType } from '../../src/core';
+import {
+  buildFeature,
+  collectStepDefs,
+  emptyField,
+  generate,
+  renderFeature,
+  sampleInput,
+  toCsv,
+  toManualCases,
+} from '../../src/core';
+import type { Field, GeneratorInput, Language, Style, TestLevel, TestType } from '../../src/core';
 
 function input(overrides: Partial<GeneratorInput> = {}): GeneratorInput {
   return { ...sampleInput(), ...overrides };
 }
+
+const field = (overrides: Partial<Field>): Field => ({ ...emptyField(), ...overrides });
+
+/** Sample fields without bounds, for tests about missing and invalid cases only. */
+const unbounded = () => sampleInput().fields.map((f) => ({ ...f, min: '', max: '' }));
 
 function parse(feature: string) {
   const newId = IdGenerator.incrementing();
@@ -25,7 +39,11 @@ const matrix = LEVELS.flatMap((level) =>
 
 describe('every combination produces runnable Gherkin', () => {
   it.each(matrix)('$level / $style / $language / $testType', (combo) => {
-    const params = input({ ...combo, api: { method: 'POST', path: '/api/users', successStatus: 201, requiresAuth: true } });
+    const params = input({
+      ...combo,
+      api: { method: 'POST', path: '/api/users', successStatus: 201, requiresAuth: true },
+      fields: [...sampleInput().fields, field({ name: 'age', valid: '30', kind: 'number', min: '18', max: '99', required: false })],
+    });
     const model = buildFeature(params);
     const feature = renderFeature(model);
 
@@ -54,8 +72,8 @@ describe('scenario selection', () => {
   });
 
   it('adds one negative scenario per required field and per invalid value', () => {
-    // Sample: Email (required, invalid value) + Password (required, no invalid value)
-    const titles = buildFeature(input()).scenarios.map((s) => s.title);
+    // Email (required, invalid value) + Password (required, no invalid value)
+    const titles = buildFeature(input({ fields: unbounded() })).scenarios.map((s) => s.title);
     expect(titles).toEqual([
       'Successful submission with valid data',
       'Missing required field "Email"',
@@ -65,7 +83,7 @@ describe('scenario selection', () => {
   });
 
   it('groups negatives into outlines with one Examples row per field', () => {
-    const outlines = buildFeature(input({ style: 'outline' })).scenarios.filter((s) => s.examples);
+    const outlines = buildFeature(input({ style: 'outline', fields: unbounded() })).scenarios.filter((s) => s.examples);
     expect(outlines.map((s) => s.examples?.rows)).toEqual([[['Email'], ['Password']], [['Email', 'not-an-email']]]);
   });
 
@@ -82,7 +100,7 @@ describe('scenario selection', () => {
   });
 
   it('ignores fields without a name', () => {
-    const model = buildFeature(input({ testType: 'regression', fields: [{ name: '  ', valid: 'x', invalid: 'y', required: true }] }));
+    const model = buildFeature(input({ testType: 'regression', fields: [field({ name: '  ', valid: 'x', invalid: 'y', min: '1', max: '5' })] }));
     expect(model.scenarios).toHaveLength(1);
   });
 });
@@ -101,7 +119,7 @@ describe('feature rendering', () => {
   });
 
   it('switches to single quotes when a value contains double quotes', () => {
-    const fields = [{ name: 'Name', valid: 'Ana "the tester"', invalid: '', required: false }];
+    const fields = [field({ name: 'Name', valid: 'Ana "the tester"', required: false })];
     expect(generate(input({ fields })).feature).toContain(`When I fill in "Name" with 'Ana "the tester"'`);
   });
 
@@ -134,10 +152,7 @@ describe('step definitions', () => {
   });
 
   it('build the valid payload from the fields, keeping numbers as numbers', () => {
-    const fields = [
-      { name: 'email', valid: 'ana@example.com', invalid: '', required: true },
-      { name: 'age', valid: '30', invalid: '', required: false },
-    ];
+    const fields = [field({ name: 'email', valid: 'ana@example.com' }), field({ name: 'age', valid: '30', required: false })];
     const steps = generate(input({ level: 'api', fields })).steps ?? '';
     expect(steps).toContain('  "email": "ana@example.com",\n  "age": 30,');
   });
@@ -145,7 +160,7 @@ describe('step definitions', () => {
 
 describe('manual test cases', () => {
   it('expand every Examples row into its own case', () => {
-    const model = buildFeature(input({ style: 'outline' }));
+    const model = buildFeature(input({ style: 'outline', fields: unbounded() }));
     const cases = toManualCases(model, 'AUTH-12');
     // happy path + 2 missing rows + 1 invalid row
     expect(cases.map((c) => c.id)).toEqual(['AUTH-12-TC-01', 'AUTH-12-TC-02', 'AUTH-12-TC-03', 'AUTH-12-TC-04']);
@@ -172,7 +187,7 @@ describe('manual test cases', () => {
   });
 
   it('translate headers and priorities', () => {
-    const csv = generate(input({ language: 'es' })).csv;
+    const csv = generate(input({ language: 'es' })).csv.generic;
     expect(csv.startsWith('ID,Título,Prioridad,')).toBe(true);
     expect(csv).toContain(',Alta,');
   });

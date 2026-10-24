@@ -60,16 +60,16 @@ test('step definitions follow the chosen framework', async ({ page }) => {
 
 test('adding and removing fields changes the generated cases', async ({ page }) => {
   await page.getByRole('tab', { name: /Manual test cases/ }).click();
-  await expect(page.getByRole('tab', { name: 'Manual test cases (4)' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Manual test cases (6)' })).toBeVisible();
 
   await page.getByRole('button', { name: '+ Add field' }).click();
   const added = settings(page).getByRole('group', { name: 'Field 3' });
   await added.getByLabel('Name').fill('Remember me');
-  await expect(page.getByRole('tab', { name: 'Manual test cases (5)' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Manual test cases (7)' })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'Missing required field "Remember me"' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Remove field Remember me' }).click();
-  await expect(page.getByRole('tab', { name: 'Manual test cases (4)' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Manual test cases (6)' })).toBeVisible();
 });
 
 test('downloads the feature file and the CSV', async ({ page }) => {
@@ -85,6 +85,37 @@ test('downloads the feature file and the CSV', async ({ page }) => {
   const csv = await csvDownload;
   expect(csv.suggestedFilename()).toBe('user-login-test-cases.csv');
   expect(await readFile(await csv.path(), 'utf8')).toMatch(/^ID,Title,Priority,Preconditions,Steps,Expected result,Tags\r\n/);
+});
+
+test('Behave generates Python step definitions with a Python file name', async ({ page }) => {
+  await page.getByRole('radiogroup', { name: 'Framework' }).getByText('Behave (Python)').click();
+  await page.getByRole('tab', { name: 'Step definitions' }).click();
+  await expect(page.getByText('user_login_steps.py')).toBeVisible();
+  await expect(code(page)).toContainText("@when('I fill in \"{field}\" with \"{value}\"')");
+});
+
+test('exports manual cases in the Xray format', async ({ page }) => {
+  await page.getByRole('tab', { name: /Manual test cases/ }).click();
+  await page.getByLabel('CSV format').selectOption({ label: 'Xray (Jira)' });
+  const pending = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download CSV' }).click();
+  const file = await pending;
+  expect(file.suggestedFilename()).toBe('user-login-xray.csv');
+  expect(await readFile(await file.path(), 'utf8')).toMatch(/^Test ID,Summary,Priority,Labels,Precondition,Action,Data,Expected Result\r\n/);
+});
+
+test('numeric bounds add boundary-value scenarios', async ({ page }) => {
+  await page.getByRole('button', { name: '+ Add field' }).click();
+  const age = settings(page).getByRole('group', { name: 'Field 3' });
+  await age.getByLabel('Name').fill('Age');
+  await age.getByLabel('Valid value', { exact: true }).fill('30');
+  await age.getByLabel('Type').selectOption('number');
+  await age.getByLabel('Required').uncheck();
+  await age.getByLabel('Min', { exact: true }).fill('18');
+  await age.getByLabel('Max', { exact: true }).fill('99');
+  await expect(code(page)).toContainText('Scenario: Value below the minimum for "Age"');
+  await expect(code(page)).toContainText('And I fill in "Age" with "17"');
+  await expect(code(page)).toContainText('Scenario: Boundary value accepted for "Age" (maximum)');
 });
 
 test('remembers the form after a reload', async ({ page }) => {

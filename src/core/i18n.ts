@@ -59,6 +59,10 @@ export const PHRASES = {
     tUnauth: 'Request without authentication is rejected',
     tOutlineMissing: 'A missing required field is rejected',
     tOutlineInvalid: 'An invalid value is rejected',
+    tBelowMin: (f: string) => `Value below the minimum for "${f}"`,
+    tAboveMax: (f: string) => `Value above the maximum for "${f}"`,
+    tBoundaryOk: (f: string, which: 'min' | 'max') => `Boundary value accepted for "${f}" (${which === 'min' ? 'minimum' : 'maximum'})`,
+    tOutlineBoundary: 'Boundary values are accepted',
     // Manual
     preconditionNone: 'None',
   },
@@ -89,6 +93,10 @@ export const PHRASES = {
     tUnauth: 'Una petición sin autenticación es rechazada',
     tOutlineMissing: 'Un campo obligatorio ausente es rechazado',
     tOutlineInvalid: 'Un valor no válido es rechazado',
+    tBelowMin: (f: string) => `Valor por debajo del mínimo en "${f}"`,
+    tAboveMax: (f: string) => `Valor por encima del máximo en "${f}"`,
+    tBoundaryOk: (f: string, which: 'min' | 'max') => `Valor límite aceptado en "${f}" (${which === 'min' ? 'mínimo' : 'máximo'})`,
+    tOutlineBoundary: 'Los valores límite son aceptados',
     preconditionNone: 'Ninguna',
   },
 } as const;

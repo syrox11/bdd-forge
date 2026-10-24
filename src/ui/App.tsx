@@ -1,5 +1,16 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
-import { generate, sampleInput, type Field, type GeneratorInput, type HttpMethod } from '../core';
+import {
+  CSV_FORMATS,
+  emptyField,
+  FRAMEWORKS,
+  generate,
+  sampleInput,
+  type CsvFormat,
+  type Field,
+  type Framework,
+  type GeneratorInput,
+  type HttpMethod,
+} from '../core';
 import { MANUAL_HEADERS } from '../core/i18n';
 import { download, slug } from './download';
 import { loadInput, saveInput } from './storage';
@@ -9,6 +20,7 @@ type Tab = 'feature' | 'steps' | 'manual';
 export function App() {
   const [input, setInput] = useState<GeneratorInput>(loadInput);
   const [tab, setTab] = useState<Tab>('feature');
+  const [csvFormat, setCsvFormat] = useState<CsvFormat>('generic');
   const output = useMemo(() => generate(input), [input]);
 
   useEffect(() => saveInput(input), [input]);
@@ -98,10 +110,7 @@ export function App() {
                 label="Framework"
                 value={input.framework}
                 onChange={(v) => set('framework', v)}
-                options={[
-                  ['playwright-bdd', 'playwright-bdd'],
-                  ['cucumber-js', 'Cucumber.js'],
-                ]}
+                options={(Object.keys(FRAMEWORKS) as Framework[]).map((f) => [f, `${FRAMEWORKS[f].label} (${FRAMEWORKS[f].codeLanguage})`])}
               />
             )}
           </Section>
@@ -142,13 +151,24 @@ export function App() {
           )}
 
           <Section title={input.level === 'api' ? 'Payload fields' : 'Form fields'}>
-            <p className="hint">A required field gets a "missing" case; an invalid value gets an "invalid" case.</p>
+            <p className="hint">
+              A required field gets a "missing" case and an invalid value an "invalid" case. Min / max add boundary values: each bound is
+              accepted, one step past it is rejected (for text, the bounds are lengths).
+            </p>
             <div className="fields">
               {input.fields.map((f, i) => (
                 <fieldset key={i} className="field-row" aria-label={`Field ${i + 1}`}>
                   <Text label="Name" value={f.name} onChange={(v) => setField(i, { name: v })} />
                   <Text label="Valid value" value={f.valid} onChange={(v) => setField(i, { valid: v })} />
                   <Text label="Invalid value" value={f.invalid} onChange={(v) => setField(i, { invalid: v })} placeholder="optional" />
+                  <Select
+                    label="Type"
+                    value={f.kind}
+                    options={['text', 'number']}
+                    onChange={(v) => setField(i, { kind: v as Field['kind'] })}
+                  />
+                  <Text label={f.kind === 'text' ? 'Min length' : 'Min'} type="number" value={f.min} onChange={(v) => setField(i, { min: v })} />
+                  <Text label={f.kind === 'text' ? 'Max length' : 'Max'} type="number" value={f.max} onChange={(v) => setField(i, { max: v })} />
                   <Check label="Required" checked={f.required} onChange={(v) => setField(i, { required: v })} />
                   <button
                     type="button"
@@ -166,7 +186,7 @@ export function App() {
                 </fieldset>
               ))}
             </div>
-            <button type="button" className="ghost" onClick={() => set('fields', [...input.fields, { name: '', valid: '', invalid: '', required: true }])}>
+            <button type="button" className="ghost" onClick={() => set('fields', [...input.fields, emptyField()])}>
               + Add field
             </button>
           </Section>
@@ -188,11 +208,21 @@ export function App() {
           </div>
 
           {activeTab === 'feature' && <Code code={output.feature} filename={`${name}.feature`} label="feature file" />}
-          {activeTab === 'steps' && output.steps && <Code code={output.steps} filename={`${name}.steps.ts`} label="step definitions" />}
+          {activeTab === 'steps' && output.steps && <Code code={output.steps} filename={FRAMEWORKS[input.framework].filename(name, input.feature)} label="step definitions" />}
           {activeTab === 'manual' && (
             <div role="tabpanel" aria-label="Manual test cases">
               <div className="actions">
-                <button type="button" onClick={() => download(`${name}-test-cases.csv`, output.csv, 'text/csv')}>
+                <label className="inline">
+                  CSV format
+                  <select value={csvFormat} onChange={(e) => setCsvFormat(e.target.value as CsvFormat)}>
+                    {(Object.keys(CSV_FORMATS) as CsvFormat[]).map((f) => (
+                      <option key={f} value={f}>
+                        {CSV_FORMATS[f].label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button type="button" onClick={() => download(`${name}-${CSV_FORMATS[csvFormat].suffix}.csv`, output.csv[csvFormat], 'text/csv')}>
                   Download CSV
                 </button>
               </div>

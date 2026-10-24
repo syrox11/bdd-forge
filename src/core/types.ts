@@ -6,7 +6,7 @@ export type Execution = 'manual' | 'automated';
 export type Language = 'en' | 'es';
 /** `scenario`: one scenario per case. `outline`: negative cases grouped in a Scenario Outline with Examples. */
 export type Style = 'scenario' | 'outline';
-export type Framework = 'playwright-bdd' | 'cucumber-js';
+export type Framework = 'playwright-bdd' | 'cucumber-js' | 'behave' | 'reqnroll';
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export interface Field {
@@ -16,6 +16,11 @@ export interface Field {
   /** A value that should be rejected; empty means "no invalid case for this field". */
   invalid: string;
   required: boolean;
+  /** `number`: min/max bound the value. `text`: min/max bound the length. */
+  kind: 'text' | 'number';
+  /** Optional bounds; empty means unbounded. Bounds add boundary-value cases. */
+  min: string;
+  max: string;
 }
 
 export interface ApiTarget {
@@ -80,6 +85,8 @@ export interface Examples {
 }
 
 export type Priority = 'High' | 'Medium' | 'Low';
+
+export type CsvFormat = 'generic' | 'xray' | 'testrail' | 'azure';
 
 export interface Scenario {
   title: string;
