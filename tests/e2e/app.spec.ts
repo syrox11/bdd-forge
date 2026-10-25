@@ -94,6 +94,30 @@ test('Behave generates Python step definitions with a Python file name', async (
   await expect(code(page)).toContainText("@when('I fill in \"{field}\" with \"{value}\"')");
 });
 
+test('Karate is offered for API and generates a runnable Karate feature', async ({ page }) => {
+  const frameworks = page.getByRole('radiogroup', { name: 'Framework' });
+  await expect(frameworks.getByText('Karate (Karate DSL)')).toHaveCount(0);
+
+  await page.getByRole('radiogroup', { name: 'Level' }).getByText('API').click();
+  await frameworks.getByText('Karate (Karate DSL)').click();
+  await page.getByRole('tab', { name: 'Karate feature' }).click();
+  await expect(page.getByText('user-login.karate.feature')).toBeVisible();
+  await expect(code(page)).toContainText("Given path '/api/login'");
+  await expect(code(page)).toContainText('When method post');
+
+  const pending = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download', exact: true }).click();
+  const file = await pending;
+  expect(file.suggestedFilename()).toBe('user-login.karate.feature');
+  expect(await readFile(await file.path(), 'utf8')).toContain('    * def validPayload = { "Email": "ana@example.com", "Password": "S3cure!pass" }');
+
+  // Back on E2E, Karate disappears and playwright-bdd takes over
+  await page.getByRole('radiogroup', { name: 'Level' }).getByText('E2E / UI').click();
+  await expect(frameworks.getByText('Karate (Karate DSL)')).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Step definitions' }).click();
+  await expect(code(page)).toContainText("import { createBdd } from 'playwright-bdd';");
+});
+
 test('exports manual cases in the Xray format', async ({ page }) => {
   await page.getByRole('tab', { name: /Manual test cases/ }).click();
   await page.getByLabel('CSV format').selectOption({ label: 'Xray (Jira)' });

@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import {
   CSV_FORMATS,
   emptyField,
+  frameworkFor,
   FRAMEWORKS,
   generate,
   sampleInput,
@@ -35,6 +36,9 @@ export function App() {
     );
 
   const name = slug(input.feature);
+  // Karate automates API only; on E2E the choice is kept but playwright-bdd is used and shown
+  const framework = frameworkFor(input);
+  const frameworks = (Object.keys(FRAMEWORKS) as Framework[]).filter((f) => FRAMEWORKS[f].levels.includes(input.level));
 
   return (
     <div className="app">
@@ -108,9 +112,9 @@ export function App() {
             {input.execution === 'automated' && (
               <Choice
                 label="Framework"
-                value={input.framework}
+                value={framework}
                 onChange={(v) => set('framework', v)}
-                options={(Object.keys(FRAMEWORKS) as Framework[]).map((f) => [f, `${FRAMEWORKS[f].label} (${FRAMEWORKS[f].codeLanguage})`])}
+                options={frameworks.map((f) => [f, `${FRAMEWORKS[f].label} (${FRAMEWORKS[f].codeLanguage})`])}
               />
             )}
           </Section>
@@ -199,7 +203,7 @@ export function App() {
             </TabButton>
             {output.steps && (
               <TabButton id="steps" active={activeTab} onSelect={setTab}>
-                Step definitions
+                {FRAMEWORKS[framework].output}
               </TabButton>
             )}
             <TabButton id="manual" active={activeTab} onSelect={setTab}>
@@ -208,7 +212,7 @@ export function App() {
           </div>
 
           {activeTab === 'feature' && <Code code={output.feature} filename={`${name}.feature`} label="feature file" />}
-          {activeTab === 'steps' && output.steps && <Code code={output.steps} filename={FRAMEWORKS[input.framework].filename(name, input.feature)} label="step definitions" />}
+          {activeTab === 'steps' && output.steps && <Code code={output.steps} filename={FRAMEWORKS[framework].filename(name, input.feature)} label={FRAMEWORKS[framework].output.toLowerCase()} />}
           {activeTab === 'manual' && (
             <div role="tabpanel" aria-label="Manual test cases">
               <div className="actions">

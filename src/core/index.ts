@@ -9,11 +9,11 @@ export { buildFeature } from './build';
 export { renderFeature, stepText } from './gherkin';
 export { toCsv, toCsvFor, toManualCases, CSV_FORMATS } from './manual';
 export { boundaryValues } from './build';
-export { renderSteps, collectStepDefs, behavePattern, FRAMEWORKS } from './frameworks';
+export { renderSteps, renderKarate, collectStepDefs, behavePattern, frameworkFor, FRAMEWORKS } from './frameworks';
 
 export interface GeneratedOutput {
   feature: string;
-  /** Step definitions; null for manual execution, where nothing gets automated. */
+  /** Step definitions (a Karate feature for Karate); null for manual execution, where nothing gets automated. */
   steps: string | null;
   manual: ReturnType<typeof toManualCases>;
   /** One CSV per test-management tool. */
@@ -25,7 +25,7 @@ export function generate(input: GeneratorInput): GeneratedOutput {
   const manual = toManualCases(model, input.storyId);
   return {
     feature: renderFeature(model),
-    steps: input.execution === 'automated' ? renderSteps(input, model.scenarios.flatMap((s) => s.steps)) : null,
+    steps: input.execution === 'automated' ? renderSteps(input, model) : null,
     manual,
     csv: Object.fromEntries((Object.keys(CSV_FORMATS) as CsvFormat[]).map((f) => [f, toCsvFor(f, manual, model)])) as Record<CsvFormat, string>,
   };

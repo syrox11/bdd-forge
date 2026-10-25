@@ -6,7 +6,7 @@ export type Execution = 'manual' | 'automated';
 export type Language = 'en' | 'es';
 /** `scenario`: one scenario per case. `outline`: negative cases grouped in a Scenario Outline with Examples. */
 export type Style = 'scenario' | 'outline';
-export type Framework = 'playwright-bdd' | 'cucumber-js' | 'behave' | 'reqnroll';
+export type Framework = 'playwright-bdd' | 'cucumber-js' | 'behave' | 'reqnroll' | 'karate';
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export interface Field {

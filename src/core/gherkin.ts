@@ -19,7 +19,7 @@ function cell(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
 }
 
-function table(headers: string[], rows: string[][], indent: string): string[] {
+export function table(headers: string[], rows: string[][], indent: string): string[] {
   const all = [headers, ...rows].map((r) => r.map(cell));
   const widths = headers.map((_, c) => Math.max(...all.map((r) => r[c].length)));
   return all.map((r) => `${indent}| ${r.map((v, c) => v.padEnd(widths[c])).join(' | ')} |`);
